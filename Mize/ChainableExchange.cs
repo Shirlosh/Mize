@@ -5,59 +5,49 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Net.Http;
+using Newtonsoft.Json;
 
 namespace Mize
 {
-    public class ChainableExchange : IChainable<string>
+    public class ChainableExchange : ChainResource<ExchangeRateList>
     {
-        List<Storage<string>> storages = new List<Storage<string>>();
-        string? memory;
+        private ExchangeRateList? memory;
+        private readonly string apiUrl = "https://openexchangerates.org/api/latest.json?app_id=d1d4939133b94995a7c05f4b3621ec23";
+        private readonly string fsPath = "path.json";
 
         public ChainableExchange()
         {
-            storages.Add(new Storage<string>(Permissions.ReadWrite, GetMemory, SetMemory, new TimeSpan(1, 0, 0)));
-            storages.Add(new Storage<string>(Permissions.ReadWrite, GetFS, SetFS, new TimeSpan(4, 0, 0)));
-            storages.Add(new Storage<string>(Permissions.ReadWrite, GetWebService, null));
+            storages.Add(new Storage<ExchangeRateList>(Permissions.ReadWrite, GetMemory, SetMemory, new TimeSpan(1, 0, 0)));
+            storages.Add(new Storage<ExchangeRateList>(Permissions.ReadWrite, GetFS, SetFS, new TimeSpan(4, 0, 0)));
+            storages.Add(new Storage<ExchangeRateList>(Permissions.ReadWrite, GetWebService, null));
         }
 
-        private Task<string> GetMemory()
+        private Task<ExchangeRateList> GetMemory()
         {
+            if (Utils.Debug) Console.WriteLine("memory get");
             return Task.FromResult(memory);
         }
-        private void SetMemory(string data)
+        private void SetMemory(ExchangeRateList data)
         {
+            if (Utils.Debug) Console.WriteLine("memory set");
             memory = data;
         }
-        private Task<string> GetFS()
+        private async Task<ExchangeRateList> GetFS()
         {
-            return Task.FromResult(File.ReadAllText("path.json"));
+            if (Utils.Debug) Console.WriteLine("fs get");
+            return JsonConvert.DeserializeObject<ExchangeRateList>(Utils.ReadFromFile(fsPath));
         }
-        private void SetFS(string data)
+        private void SetFS(ExchangeRateList data)
         {
-            File.WriteAllText("path.json", data);
-
+            if (Utils.Debug) Console.WriteLine("fs set");
+            Utils.WriteToFile(fsPath, data.ToString());
         }
-        private async Task<string> GetWebService()
+        private async Task<ExchangeRateList> GetWebService()
         {
-            var client = new HttpClient();
-            var request = new HttpRequestMessage
-            {
-                Method = HttpMethod.Get,
-                RequestUri = new Uri("https://openexchangerates.org/api/latest.json?app_id=d1d4939133b94995a7c05f4b3621ec23"),
-                Headers = { { "accept", "application/json" }, },
-            };
-            using (var response = await client.SendAsync(request))
-            {
-                response.EnsureSuccessStatusCode();
-                var body = await response.Content.ReadAsStringAsync();
-                return body;
-            }
+            if (Utils.Debug) Console.WriteLine("api get");
+            var body = await Utils.ApiRequest(apiUrl);
+            return JsonConvert.DeserializeObject<ExchangeRateList>(body);
         }
 
-
-        public List<Storage<string>> GetIterableStorage()
-        {
-            return storages;
-        }
     }
 }

@@ -24,21 +24,32 @@ namespace Mize
             ExpirationDate = DateTime.Now;
         }
 
-        public Task<T>? GetData()
+        public Task<T> GetData()
         {
-            return ExpirationInterval == null || ExpirationDate > DateTime.Now ? getData() : null;
+            if (IsExpired())
+            {
+                throw new InvalidOperationException("cannot read from expired storage");
+            }
+            return getData();
         }
 
         public void SetData(T data)
         {
-            if (Permission == Permissions.ReadWrite)
+            if (Permission == Permissions.ReadOnly)
             {
-                setData(data);
-                ExpirationDate = ExpirationInterval != null ?  DateTime.Now.Add((TimeSpan)ExpirationInterval) : ExpirationDate;
-            }
-        }
+                throw new InvalidOperationException("cannot write to readonly storage");
 
+            }
+            setData(data);
+            ExpirationDate = ExpirationInterval != null ? DateTime.Now.Add((TimeSpan)ExpirationInterval) : ExpirationDate;
+        }
+        public bool IsExpired()
+        {
+            return ExpirationInterval != null && ExpirationDate < DateTime.Now;
+        }
     }
+
+
 
     public enum Permissions
     {

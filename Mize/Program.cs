@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,11 +13,9 @@ namespace Mize
     {
         public static async Task Main(string[] args)
         {
-            var erl = new ExchangeRateList();
-            var r = new ChainResource(erl);
+            var r = new ChainableExchange();
             Console.WriteLine(await r.GetValue());
             Console.WriteLine(await r.GetValue());
-            //File.WriteAllText("path.json", "hello");
 
         }
     }
